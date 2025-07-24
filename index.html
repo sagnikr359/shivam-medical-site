@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shivam Medical Hall - Stock Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      transition: all 0.3s;
+    }
+    :root {
+      --bg: #f5f5f5;
+      --text: #000;
+      --card: #fff;
+    }
+    .dark {
+      --bg: #121212;
+      --text: #fff;
+      --card: #1f1f1f;
+    }
+    header {
+      background: #2e7d32;
+      color: white;
+      padding: 10px 20px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .clock {
+      font-weight: bold;
+    }
+    .container {
+      padding: 20px;
+    }
+    .login, .main-content {
+      display: none;
+    }
+    input, select, button {
+      padding: 5px;
+      margin: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table, th, td {
+      border: 1px solid #888;
+    }
+    th, td {
+      padding: 6px;
+      text-align: center;
+    }
+    .popup {
+      position: fixed;
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      padding: 10px;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+    }
+    .hidden { display: none; }
+    .btn { cursor: pointer; }
+    .footer-btns {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top-bar">
+      <div>
+        <h2>Shivam Medical Hall</h2>
+        <small>Vill+Mouja-Nakpul, P.O.-Gobardanga, Pin-743252<br>PAN: AIKPR8273L</small>
+      </div>
+      <div>
+        <span class="clock" id="clock">--:--:--</span>
+        <br>
+        <button onclick="toggleTheme()">🌓 Theme</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="login" id="login">
+      <h3>Admin Login</h3>
+      <input type="text" id="username" placeholder="Username">
+      <input type="password" id="password" placeholder="Password">
+      <button onclick="login()">Login</button>
+    </div>
+
+    <div class="main-content" id="main">
+      <h3>Add Medicine</h3>
+      <input type="text" id="name" placeholder="Medicine Name">
+      <input type="number" id="qty" placeholder="Qty">
+      <input type="text" id="batch" placeholder="Batch No">
+      <input type="text" id="mfgco" placeholder="Manufacturer">
+      <input type="month" id="mfg">
+      <input type="month" id="exp">
+      <input type="number" id="mrp" placeholder="MRP (₹)">
+      <input type="number" id="trade" placeholder="Trade Rate (₹)">
+      <input type="number" id="sell" placeholder="Sell Rate (₹)">
+      <select id="type">
+        <option>Buy</option>
+        <option>Sell</option>
+      </select>
+      <button onclick="addMedicine()">Add</button>
+
+      <h3>Medicine List</h3>
+      <input type="text" id="search" placeholder="Search..." oninput="filterTable()">
+      <table id="medTable">
+        <thead>
+          <tr>
+            <th>Name</th><th>Qty</th><th>Batch</th><th>Mfg Co</th>
+            <th>MFG</th><th>EXP</th><th>MRP ₹</th><th>Trade ₹</th><th>Sell ₹</th><th>Type</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="footer-btns">
+        <button onclick="exportPDF()">📄 Export PDF</button>
+        <button onclick="exportXLSX()">📁 Backup XLSX</button>
+        <button onclick="logout()">🔐 Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup hidden" id="expiryPopup">
+    <span id="expiryList"></span>
+    <button onclick="closePopup()">Close</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    const medTable = document.getElementById('medTable').getElementsByTagName('tbody')[0];
+    let medicines = JSON.parse(localStorage.getItem('medicines') || '[]');
+    const username = "admin", password = "admin123";
+    const now = new Date(), hrs = now.getHours(), min = now.getMinutes(), day = now.getDay();
+
+    // Business Hours Control
+    const isBusinessHours = (hrs >= 8 && hrs < 22 && day !== 5);
+    if (!isBusinessHours) {
+      document.body.innerHTML = "<h2 style='padding:20px;'>⛔ Shop is closed now.<br>Open Hours: 8 AM to 10 PM<br>Closed on Friday</h2>";
+    } else {
+      document.getElementById('login').style.display = 'block';
+    }
+
+    function login() {
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      if (u === username && p === password) {
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('main').style.display = 'block';
+        render();
+        showExpiryPopup();
+      } else {
+        alert("Invalid credentials");
+      }
+    }
+
+    function logout() {
+      location.reload();
+    }
+
+    function render() {
+      medTable.innerHTML = "";
+      medicines.forEach((m, i) => {
+        const row = medTable.insertRow();
+        row.innerHTML = `
+          <td>${m.name}</td><td>${m.qty}</td><td>${m.batch}</td><td>${m.mfgco}</td>
+          <td>${m.mfg}</td><td>${m.exp}</td><td>₹${m.mrp}</td><td>₹${m.trade}</td><td>₹${m.sell}</td>
+          <td>${m.type}</td><td>${m.status}</td>
+          <td>
+            <button onclick="editMedicine(${i})">✏</button>
+            <button onclick="deleteMedicine(${i})">🗑</button>
+          </td>
+        `;
+      });
+    }
+
+    function addMedicine() {
+      const m = {
+        name: v('name'), qty: v('qty'), batch: v('batch'), mfgco: v('mfgco'),
+        mfg: v('mfg'), exp: v('exp'), mrp: v('mrp'), trade: v('trade'),
+        sell: v('sell'), type: v('type'), status: "Available"
+      };
+      medicines.push(m);
+      save();
+      clear();
+    }
+
+    function editMedicine(i) {
+      const m = medicines[i];
+      document.getElementById('name').value = m.name;
+      document.getElementById('qty').value = m.qty;
+      document.getElementById('batch').value = m.batch;
+      document.getElementById('mfgco').value = m.mfgco;
+      document.getElementById('mfg').value = m.mfg;
+      document.getElementById('exp').value = m.exp;
+      document.getElementById('mrp').value = m.mrp;
+      document.getElementById('trade').value = m.trade;
+      document.getElementById('sell').value = m.sell;
+      document.getElementById('type').value = m.type;
+      medicines.splice(i, 1);
+      save();
+    }
+
+    function deleteMedicine(i) {
+      if (confirm("Are you sure?")) {
+        medicines.splice(i, 1);
+        save();
+      }
+    }
+
+    function save() {
+      localStorage.setItem('medicines', JSON.stringify(medicines));
+      render();
+    }
+
+    function clear() {
+      ['name','qty','batch','mfgco','mfg','exp','mrp','trade','sell','type'].forEach(id => document.getElementById(id).value = "");
+    }
+
+    function v(id) {
+      return document.getElementById(id).value;
+    }
+
+    function filterTable() {
+      const term = document.getElementById('search').value.toLowerCase();
+      Array.from(medTable.rows).forEach(row => {
+        row.style.display = [...row.cells].some(cell => cell.innerText.toLowerCase().includes(term)) ? "" : "none";
+      });
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+    }
+
+    function showExpiryPopup() {
+      const today = new Date();
+      const soon = medicines.filter(m => {
+        const [year, month] = m.exp.split("-").map(Number);
+        const expDate = new Date(year, month - 1);
+        const daysLeft = (expDate - today) / (1000 * 60 * 60 * 24);
+        return daysLeft >= 0 && daysLeft <= 30;
+      });
+      if (soon.length) {
+        document.getElementById("expiryList").innerHTML = `<b>Expiring Soon:</b><br>` + soon.map(m => `${m.name} - ${m.exp}`).join("<br>");
+        document.getElementById("expiryPopup").classList.remove("hidden");
+      }
+    }
+
+    function closePopup() {
+      document.getElementById("expiryPopup").classList.add("hidden");
+    }
+
+    setInterval(() => {
+      const d = new Date();
+      document.getElementById("clock").textContent = d.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" });
+    }, 1000);
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const header = [
+        "Batch No", "Mfg Date", "Manufacturer", "Expiry Date", "MRP (₹)", "Type"
+      ];
+      const rows = medicines.map(m => [
+        m.batch, m.mfg, m.mfgco, m.exp, m.mrp, m.type
+      ]);
+
+      doc.setFontSize(12);
+      doc.text("Shivam Medical Hall", 80, 10);
+      doc.setFontSize(9);
+      doc.text("Vill+Mouja-Nakpul, P.O.-Gobardanga, Pin-743252", 60, 16);
+      doc.text("PAN: AIKPR8273L", 90, 22);
+
+      doc.autoTable({
+        head: [header],
+        body: rows,
+        startY: 28
+      });
+
+      doc.save("shivam_medical_report.pdf");
+    }
+
+    function exportXLSX() {
+      const wb = XLSX.utils.book_new();
+      const ws_data = [
+        ["Name", "Qty", "Batch No", "Manufacturer", "Mfg Date", "Exp Date", "MRP (₹)", "Trade Rate (₹)", "Sell Rate (₹)", "Type", "Status"]
+      ];
+      medicines.forEach(m => {
+        ws_data.push([
+          m.name, m.qty, m.batch, m.mfgco, m.mfg, m.exp, m.mrp, m.trade, m.sell, m.type, m.status
+        ]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Medicines");
+      XLSX.writeFile(wb, "shivam_medical_backup.xlsx");
+    }
+  </script>
+</body>
+</html>
