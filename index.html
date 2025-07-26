@@ -689,7 +689,7 @@
             }
         }
 
-        // Form submission handler
+        // Form submission handler for adding medicine
         document.getElementById('medicineForm')?.addEventListener('submit', function (e) {
             e.preventDefault();
             if (!isLoggedIn) return;
@@ -752,14 +752,13 @@
 
             try {
                 localStorage.setItem('medicines', JSON.stringify(medicines));
+                displayMedicines();
+                showExpiryAlert();
+                this.reset();
             } catch (e) {
                 console.error('Error saving to localStorage:', e);
                 alert('Failed to save data. Please try again.');
-                return;
             }
-            displayMedicines();
-            showExpiryAlert();
-            this.reset();
         });
 
         // Initial load
