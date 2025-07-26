@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shivam Medical Hall - Inventory Management</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Poppins font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Pikaday CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css">
+    <style>
+        body {
+            background-image: url('https://www.transparenttextures.com/patterns/medical-wallpaper.png'), linear-gradient(135deg, #e3f2fd 0%, #b3e5fc 100%);
+            background-size: cover, auto;
+            background-attachment: fixed;
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            overflow-x: hidden;
+        }
+        .expired-row {
+            background-color: #ffe6e6 !important;
+            border: 2px solid #dc3545 !important;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .form-container {
+            max-width: 100%;
+            margin: 15px auto;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            backdrop-filter: blur(5px);
+            transition: transform 0.3s ease;
+        }
+        .form-container:hover {
+            transform: translateY(-5px);
+        }
+        table {
+            width: 100%;
+            margin-top: 15px;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+        }
+        th, td {
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+        }
+        th {
+            background: linear-gradient(90deg, #007bff, #00d4ff);
+            color: white;
+            font-weight: 600;
+        }
+        .login-container {
+            max-width: 100%;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            padding: 20px;
+            animation: heartbeat 2s infinite;
+        }
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            10% { transform: scale(1.05); }
+            20% { transform: scale(1); }
+            30% { transform: scale(1.05); }
+            40% { transform: scale(1); }
+            100% { transform: scale(1); }
+        }
+        .login-container h3 {
+            color: #007bff;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+            font-size: 24px;
+        }
+        .login-container .form-control {
+            border-radius: 30px;
+            padding-left: 40px;
+            border: 1px solid #ced4da;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        .login-container .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
+        }
+        .login-container .input-group-text {
+            border: none;
+            background: transparent;
+            position: absolute;
+            z-index: 3;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 10px;
+            color: #007bff;
+        }
+        .login-container .btn-primary {
+            border-radius: 30px;
+            padding: 10px;
+            font-weight: 600;
+            background: linear-gradient(90deg, #007bff, #00d4ff);
+            border: none;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        .login-container .btn-primary:hover {
+            background: linear-gradient(90deg, #0056b3, #0096cc);
+            transform: translateY(-2px);
+        }
+        .search-container {
+            max-width: 100%;
+            margin: 15px auto;
+            flex-wrap: wrap;
+        }
+        .btn-primary, .btn-success, .btn-secondary, .btn-danger {
+            border-radius: 25px;
+            padding: 8px 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #007bff, #00d4ff);
+            border: none;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(90deg, #0056b3, #0096cc);
+        }
+        .btn-success {
+            background: linear-gradient(90deg, #28a745, #34c759);
+        }
+        .btn-success:hover {
+            background: linear-gradient(90deg, #1e7e34, #2ba84a);
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .time-display {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 123, 255, 0.95);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+            font-weight: 500;
+            animation: glow 3s infinite;
+            z-index: 1000;
+        }
+        @keyframes glow {
+            0% { box-shadow: 0 5px 20px rgba(0, 123, 255, 0.5); }
+            50% { box-shadow: 0 5px 30px rgba(0, 123, 255, 0.8); }
+            100% { box-shadow: 0 5px 20px rgba(0, 123, 255, 0.5); }
+        }
+        .header-title {
+            color: #007bff;
+            font-weight: 700;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
+            font-size: 28px;
+        }
+        .logo {
+            display: block;
+            margin: 0 auto 15px;
+            max-width: 100px;
+        }
+        .modal-content {
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+        }
+        .modal-header {
+            background: linear-gradient(90deg, #007bff, #00d4ff);
+            color: white;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }
+        .modal-title {
+            font-weight: 600;
+            font-size: 18px;
+        }
+        .modal-body table {
+            margin-top: 0;
+            box-shadow: none;
+        }
+        .notification-box {
+            max-width: 100%;
+            margin: 15px auto;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            backdrop-filter: blur(5px);
+            display: block;
+        }
+        .notification-box .header {
+            background: linear-gradient(90deg, #007bff, #00d4ff);
+            color: white;
+            padding: 10px;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+            font-weight: 600;
+            margin: -15px -15px 15px -15px;
+            font-size: 16px;
+        }
+        .notification-box .list-group {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .notification-box .list-group-item {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .notification-box .close-btn {
+            float: right;
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .notification-box .close-btn:hover {
+            color: #a71d31;
+        }
+        .restricted-message {
+            text-align: center;
+            margin-top: 50px;
+            font-size: 24px;
+            color: #dc3545;
+            font-weight: 600;
+        }
+        @media (max-width: 767px) {
+            th, td { font-size: 12px; padding: 8px; }
+            .form-container { padding: 10px; }
+            .login-container h3 { font-size: 20px; }
+            .login-container .btn-primary { font-size: 14px; padding: 8px; }
+            .btn-primary, .btn-success, .btn-secondary, .btn-danger { font-size: 12px; padding: 6px 12px; }
+            .time-display { font-size: 12px; padding: 8px 12px; top: 5px; right: 5px; }
+            .header-title { font-size: 22px; }
+            .logo { max-width: 80px; }
+            .modal-title { font-size: 16px; }
+            .notification-box .header { font-size: 14px; }
+            .notification-box .list-group-item { font-size: 12px; }
+            .notification-box .close-btn { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // Check if device is mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+        if (isMobile) {
+            document.body.innerHTML = '<div class="restricted-message">Access restricted to desktops and laptops only. No Mobiles will allowed!!!</div>';
+        } else {
+            // Proceed with the website content only for desktop/laptop
+        }
+    </script>
+
+    <!-- Login Section -->
+    <div class="login-container" id="loginSection">
+        <!-- Logo (Replace with your hosted image URL after downloading from Freepik) -->
+        <img src="logo.png" alt="Shivam Medical Hall Logo" class="logo">
+        <h3><i class="fas fa-clinic-medical me-2"></i>Shivam Medical Hall</h3>
+        <form id="loginForm">
+            <div class="mb-3 position-relative">
+                <label for="username" class="form-label">Username</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    <input type="text" class="form-control ps-5" id="username" required>
+                </div>
+            </div>
+            <div class="mb-3 position-relative">
+                <label for="password" class="form-label">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <input type="password" class="form-control ps-5" id="password" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-sign-in-alt me-2"></i>Login</button>
+            <p id="loginError" class="text-danger mt-3 text-center" style="display: none;">Invalid credentials or access restricted.</p>
+        </form>
+    </div>
+
+    <!-- Main Content (Hidden until login) -->
+    <div class="container" id="mainContent" style="display: none;">
+        <div class="time-display" id="timeDisplay">Kolkata Time: Loading...</div>
+        <h1 class="text-center my-3 header-title"><i class="fas fa-clinic-medical me-2"></i>Shivam Medical Hall - Inventory Management</h1>
+
+        <!-- Medicine Table -->
+        <div class="form-container">
+            <h3><i class="fas fa-table me-2"></i>Medicine Inventory</h3>
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Quantity</th>
+                        <th>MRP (₹)</th>
+                        <th>Batch No.</th>
+                        <th>Mfg. Date</th>
+                        <th>Exp. Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="medicineTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Notification Box -->
+        <div class="notification-box" id="notificationBox">
+            <div class="header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-bell me-2"></i>Notifications</span>
+                <button class="close-btn" onclick="this.parentElement.parentElement.style.display='none'">×</button>
+            </div>
+            <ul class="list-group" id="notificationList"></ul>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-container d-flex">
+            <input type="text" class="form-control me-2" id="searchInput" placeholder="Search by Product Name or Batch No.">
+            <button class="btn btn-secondary" id="searchButton" onclick="searchMedicines()"><i class="fas fa-search me-2"></i>Search</button>
+        </div>
+
+        <!-- Form to Add Medicine -->
+        <div class="form-container card p-3">
+            <h3><i class="fas fa-plus-circle me-2"></i>Add Medicine</h3>
+            <form id="medicineForm">
+                <div class="mb-3">
+                    <label for="productName" class="form-label">Product Name</label>
+                    <input type="text" class="form-control" id="productName" required>
+                </div>
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">Quantity</label>
+                    <input type="number" class="form-control" id="quantity" min="1" step="1" required>
+                </div>
+                <div class="mb-3">
+                    <label for="mrp" class="form-label">MRP (₹)</label>
+                    <input type="number" class="form-control" id="mrp" step="0.01" min="0" required>
+                </div>
+                <div class="mb-3">
+                    <label for="batchNo" class="form-label">Batch No.</label>
+                    <input type="text" class="form-control" id="batchNo" required>
+                </div>
+                <div class="mb-3">
+                    <label for="mfgDate" class="form-label">Mfg. Date (mm-yyyy)</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="mfgDate" placeholder="mm-yyyy" pattern="(0[1-9]|1[0-2])-[0-9]{4}" required>
+                        <button type="button" class="btn btn-primary" id="mfgDatePickerBtn"><i class="fas fa-calendar"></i></button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="expDate" class="form-label">Exp. Date (mm-yyyy)</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="expDate" placeholder="mm-yyyy" pattern="(0[1-9]|1[0-2])-[0-9]{4}" required>
+                        <button type="button" class="btn btn-primary" id="expDatePickerBtn"><i class="fas fa-calendar"></i></button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Add Medicine</button>
+            </form>
+        </div>
+
+        <!-- PDF Download and Logout Buttons -->
+        <div class="text-center my-3">
+            <button class="btn btn-success me-2" onclick="generatePDF(false)"><i class="fas fa-file-pdf me-2"></i>Download Expiry Report (PDF)</button>
+            <button class="btn btn-danger" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
+        </div>
+    </div>
+
+    <!-- Search Results Modal -->
+    <div class="modal fade" id="searchModal" tabindex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="searchModalLabel"><i class="fas fa-search me-2"></i>Search Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-bordered table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Quantity</th>
+                                <th>MRP (₹)</th>
+                                <th>Batch No.</th>
+                                <th>Mfg. Date</th>
+                                <th>Exp. Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="searchResults"></tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio for Alert -->
+    <audio id="alertSound" src="alert.mp3" preload="auto"></audio>
+
+    <!-- Bootstrap JS and Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Pikaday JS -->
+    <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
+    <script>
+        const { jsPDF } = window.jspdf;
+        let medicines = [];
+        let inMemoryMedicines = []; // Fallback if localStorage fails
+
+        // Load medicines from localStorage with fallback
+        function loadMedicines() {
+            try {
+                const storedMedicines = localStorage.getItem('medicines');
+                medicines = storedMedicines ? JSON.parse(storedMedicines) : [];
+                inMemoryMedicines = [...medicines];
+            } catch (e) {
+                console.error('Error loading medicines from localStorage:', e);
+                medicines = [...inMemoryMedicines];
+            }
+        }
+        loadMedicines();
+
+        let isLoggedIn = false;
+        let searchTimeout = null;
+        let audioPlayed = false; // Track if audio has been played
+
+        // Kolkata (IST) time display
+        function updateTimeDisplay() {
+            const options = {
+                timeZone: 'Asia/Kolkata',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            const timeDisplay = document.getElementById('timeDisplay');
+            if (timeDisplay) {
+                timeDisplay.textContent = `Kolkata Time: ${new Date().toLocaleString('en-US', options)}`;
+            }
+        }
+        setInterval(updateTimeDisplay, 1000);
+        updateTimeDisplay();
+
+        // Check business hours (8 AM - 10 PM, except Friday)
+        function isBusinessHours() {
+            const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+            const date = new Date(now);
+            const day = date.getDay(); // 0 = Sunday, 5 = Friday
+            const hours = date.getHours();
+            return day !== 5 && hours >= 8 && hours < 22;
+        }
+
+        // Automatic PDF report at 10 PM IST
+        let pdfTriggered = false;
+        function checkAutoPDF() {
+            const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+            const date = new Date(now);
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            if (hours === 22 && minutes === 0 && !pdfTriggered && isLoggedIn && isBusinessHours()) {
+                generatePDF(true);
+                pdfTriggered = true; // Prevent multiple triggers
+                setTimeout(() => { pdfTriggered = false; }, 60000); // Reset after 1 minute
+            }
+        }
+        setInterval(checkAutoPDF, 1000);
+
+        // Auto-kick at 10:00 PM IST
+        let kickTriggered = false;
+        function checkAutoKick() {
+            const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+            const date = new Date(now);
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            if (hours === 22 && minutes === 0 && !kickTriggered && isLoggedIn) {
+                if (confirm('Shop Server Closed Today! Good night!')) {
+                    isLoggedIn = false;
+                    document.getElementById('mainContent').style.display = 'none';
+                    document.getElementById('loginSection').style.display = 'block';
+                }
+                kickTriggered = true;
+                setTimeout(() => { kickTriggered = false; }, 60000); // Reset after 1 minute
+            }
+        }
+        setInterval(checkAutoKick, 1000);
+
+        // Logout function
+        function logout() {
+            if (isLoggedIn && confirm('Are you sure you want to logout?')) {
+                isLoggedIn = false;
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('loginSection').style.display = 'block';
+                saveMedicines(); // Save before logout
+            }
+        }
+
+        // Login handler with shop closed and mobile check pop-up
+        document.getElementById('loginForm')?.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const username = document.getElementById('username')?.value.trim() || '';
+            const password = document.getElementById('password')?.value.trim() || '';
+            const loginError = document.getElementById('loginError');
+
+            // Check for mobile device
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+            if (isMobile) {
+                alert('Access restricted to desktops and laptops only. No Mobiles will allowed!!!');
+                return;
+            }
+
+            if (loginError) {
+                if (!isBusinessHours()) {
+                    const alertSound = document.getElementById('alertSound');
+                    if (alertSound && !audioPlayed) {
+                        try {
+                            alertSound.play();
+                            audioPlayed = true; // Allow audio after first interaction
+                        } catch (e) {
+                            console.log('Audio play failed:', e);
+                        }
+                    }
+                    alert('Shop is closed now!');
+                    loginError.style.display = 'block';
+                    loginError.textContent = 'Access restricted outside business hours (8 AM - 10 PM, except Friday).';
+                } else if (username === 'admin' && password === 'admin123') {
+                    isLoggedIn = true;
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    loadMedicines();
+                    displayMedicines();
+                    showExpiryAlert();
+                    initializeSearch();
+                    initializeDatePickers();
+                    loginError.style.display = 'none';
+                } else {
+                    loginError.style.display = 'block';
+                    loginError.textContent = 'Invalid username or password.';
+                }
+            }
+        });
+
+        // Validate mm-yyyy format
+        function isValidDateFormat(dateStr) {
+            const regex = /^(0[1-9]|1[0-2])-[0-9]{4}$/;
+            return regex.test(dateStr);
+        }
+
+        // Parse mm-yyyy to Date (start of month for consistency)
+        function parseDate(dateStr) {
+            const [month, year] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, 1);
+        }
+
+        // Validate manufacturing and expiry dates
+        function isValidDateRange(mfgDateStr, expDateStr) {
+            const mfgDate = parseDate(mfgDateStr);
+            const expDate = parseDate(expDateStr);
+            const today = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+            const todayDate = new Date(today);
+            return mfgDate <= todayDate && expDate > mfgDate;
+        }
+
+        // Check if medicine expires within 30 days
+        function isExpiringSoon(expDateStr) {
+            const today = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+            const todayDate = new Date(today);
+            const expDate = parseDate(expDateStr);
+            const timeDiff = expDate - todayDate;
+            const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+            return daysDiff <= 30 && daysDiff >= 0;
+        }
+
+        // Display medicines in table
+        function displayMedicines(filteredMedicines = medicines) {
+            if (!isLoggedIn) return;
+            const tableBody = document.getElementById('medicineTable');
+            if (!tableBody) return;
+            tableBody.innerHTML = '';
+            filteredMedicines.forEach((medicine, index) => {
+                const isExpiring = isExpiringSoon(medicine.expDate);
+                const row = document.createElement('tr');
+                if (isExpiring) row.classList.add('expired-row');
+                row.innerHTML = `
+                    <td>${medicine.productName || 'N/A'}</td>
+                    <td>${medicine.quantity || 0}</td>
+                    <td>${(medicine.mrp || 0).toFixed(2)}</td>
+                    <td>${medicine.batchNo || 'N/A'}</td>
+                    <td>${medicine.mfgDate || 'N/A'}</td>
+                    <td>${medicine.expDate || 'N/A'}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="removeMedicine(${index})"><i class="fas fa-trash me-2"></i>Remove</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+            updateNotifications();
+        }
+
+        // Update notifications in the persistent box
+        function updateNotifications() {
+            if (!isLoggedIn) return;
+            const notificationList = document.getElementById('notificationList');
+            if (!notificationList) return;
+            notificationList.innerHTML = '';
+            const expiringMedicines = medicines.filter(medicine => isExpiringSoon(medicine.expDate));
+            if (expiringMedicines.length > 0) {
+                expiringMedicines.forEach(medicine => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = `${medicine.productName || 'Unknown'} (Batch: ${medicine.batchNo || 'N/A'}) expires on ${medicine.expDate || 'N/A'}`;
+                    notificationList.appendChild(li);
+                });
+            }
+            document.getElementById('notificationBox').style.display = 'block';
+        }
+
+        // Show expiry alert with sound
+        function showExpiryAlert() {
+            if (!isLoggedIn) return;
+            const expiringMedicines = medicines.filter(medicine => isExpiringSoon(medicine.expDate));
+            if (expiringMedicines.length > 0 && audioPlayed) {
+                const alertSound = document.getElementById('alertSound');
+                if (alertSound) {
+                    try {
+                        alertSound.play();
+                    } catch (e) {
+                        console.log('Audio play failed:', e);
+                    }
+                }
+                const message = expiringMedicines.map(m => `${m.productName || 'Unknown'} (Batch: ${m.batchNo || 'N/A'}) expires on ${m.expDate || 'N/A'}`).join('\n');
+                alert(`Expiring Soon:\n${message}`);
+            }
+        }
+
+        // Remove medicine
+        function removeMedicine(index) {
+            if (index >= 0 && index < medicines.length) {
+                medicines.splice(index, 1);
+                inMemoryMedicines = [...medicines];
+                saveMedicines();
+                displayMedicines();
+                showExpiryAlert();
+            }
+        }
+
+        // Save medicines to localStorage with fallback
+        function saveMedicines() {
+            try {
+                localStorage.setItem('medicines', JSON.stringify(medicines));
+            } catch (e) {
+                console.error('Error saving to localStorage:', e);
+                medicines = [...inMemoryMedicines]; // Revert to in-memory data
+            }
+        }
+
+        // Initialize search
+        function initializeSearch() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    if (searchTimeout) clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(searchMedicines, 300);
+                });
+            }
+        }
+
+        // Debounced search medicines and show modal
+        function searchMedicines() {
+            const searchInput = document.getElementById('searchInput')?.value.trim().toLowerCase() || '';
+            if (searchInput.length < 2) {
+                displayMedicines();
+                return;
+            }
+            const filteredMedicines = medicines.filter(
+                medicine =>
+                    (medicine.productName?.toLowerCase().includes(searchInput) || '') ||
+                    (medicine.batchNo?.toLowerCase().includes(searchInput) || '')
+            );
+            displayMedicines(filteredMedicines);
+
+            const searchResults = document.getElementById('searchResults');
+            if (searchResults) {
+                searchResults.innerHTML = '';
+                if (filteredMedicines.length > 0) {
+                    filteredMedicines.forEach(medicine => {
+                        const isExpiring = isExpiringSoon(medicine.expDate);
+                        const row = document.createElement('tr');
+                        if (isExpiring) row.classList.add('expired-row');
+                        row.innerHTML = `
+                            <td>${medicine.productName || 'N/A'}</td>
+                            <td>${medicine.quantity || 0}</td>
+                            <td>${(medicine.mrp || 0).toFixed(2)}</td>
+                            <td>${medicine.batchNo || 'N/A'}</td>
+                            <td>${medicine.mfgDate || 'N/A'}</td>
+                            <td>${medicine.expDate || 'N/A'}</td>
+                        `;
+                        searchResults.appendChild(row);
+                    });
+                } else {
+                    searchResults.innerHTML = '<tr><td colspan="6">No matching medicines found.</td></tr>';
+                }
+                const searchModal = new bootstrap.Modal(document.getElementById('searchModal'));
+                if (searchModal) searchModal.show();
+            }
+        }
+
+        // Generate PDF report
+        function generatePDF(isAuto = false) {
+            if (!isLoggedIn) return;
+            try {
+                const doc = new jsPDF();
+                doc.setFontSize(18);
+                doc.text('Shivam Medical Hall - Expiry Report', 20, 20);
+                doc.setFontSize(12);
+                doc.text(`Generated on: ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })}`, 20, 30);
+                if (isAuto) doc.text('Automatic Report (10:00 PM IST)', 20, 40);
+
+                const expiringMedicines = medicines.filter(medicine => isExpiringSoon(medicine.expDate));
+                let y = isAuto ? 50 : 40;
+                doc.setFontSize(14);
+                doc.text('Medicines Expiring Within 30 Days:', 20, y);
+                y += 10;
+
+                if (expiringMedicines.length === 0) {
+                    doc.text('No medicines expiring within 30 days.', 20, y);
+                } else {
+                    doc.autoTable({
+                        startY: y,
+                        head: [['Product Name', 'Quantity', 'MRP (₹)', 'Batch No.', 'Mfg. Date', 'Exp. Date']],
+                        body: expiringMedicines.map(m => [
+                            m.productName || 'N/A',
+                            m.quantity || 0,
+                            (m.mrp || 0).toFixed(2),
+                            m.batchNo || 'N/A',
+                            m.mfgDate || 'N/A',
+                            m.expDate || 'N/A'
+                        ]),
+                        theme: 'striped',
+                        styles: { fontSize: 10, cellPadding: 3 },
+                        headStyles: { fillColor: [0, 123, 255] },
+                        alternateRowStyles: { fillColor: [240, 240, 240] },
+                        margin: { top: 10 }
+                    });
+                }
+                doc.save(`Expiry_Report_${new Date().toISOString().split('T')[0]}_${isAuto ? 'Auto' : 'Manual'}.pdf`);
+            } catch (e) {
+                console.error('Error generating PDF:', e);
+                alert('Failed to generate PDF. Please try again.');
+            }
+        }
+
+        // Form submission handler for adding medicine
+        document.addEventListener('DOMContentLoaded', () => {
+            const medicineForm = document.getElementById('medicineForm');
+            if (medicineForm) {
+                medicineForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    if (!isLoggedIn) return;
+
+                    const productName = document.getElementById('productName')?.value.trim() || '';
+                    const quantity = parseInt(document.getElementById('quantity')?.value) || 0;
+                    const mrp = parseFloat(document.getElementById('mrp')?.value) || 0;
+                    const batchNo = document.getElementById('batchNo')?.value.trim().toUpperCase() || '';
+                    const mfgDate = document.getElementById('mfgDate')?.value.trim() || '';
+                    const expDate = document.getElementById('expDate')?.value.trim() || '';
+
+                    if (!productName || !batchNo || !isValidDateFormat(mfgDate) || !isValidDateFormat(expDate)) {
+                        alert('Please fill all fields with valid data (mm-yyyy format for dates).');
+                        return;
+                    }
+                    if (!isValidDateRange(mfgDate, expDate)) {
+                        alert('Expiry date must be after manufacturing date and not in the future for Mfg. Date.');
+                        return;
+                    }
+                    if (quantity <= 0 || !Number.isInteger(quantity)) {
+                        alert('Quantity must be a positive integer.');
+                        return;
+                    }
+                    if (mrp < 0 || isNaN(mrp)) {
+                        alert('MRP must be a non-negative number.');
+                        return;
+                    }
+                    if (medicines.some(m => m.batchNo === batchNo)) {
+                        alert('This batch number already exists. Please use a unique batch number.');
+                        return;
+                    }
+
+                    const existingMedicine = medicines.find(
+                        m => m.productName.toLowerCase() === productName.toLowerCase() && m.batchNo === batchNo
+                    );
+
+                    if (existingMedicine) {
+                        if (
+                            existingMedicine.mfgDate !== mfgDate ||
+                            existingMedicine.expDate !== expDate ||
+                            Math.abs(existingMedicine.mrp - mrp) > 0.01
+                        ) {
+                            alert('Batch number exists with different Mfg. Date, Exp. Date, or MRP. Please use a new batch number.');
+                            return;
+                        }
+                        existingMedicine.quantity += quantity;
+                    } else {
+                        medicines.push({ productName, quantity, mrp, batchNo, mfgDate, expDate });
+                    }
+
+                    inMemoryMedicines = [...medicines];
+                    saveMedicines();
+                    displayMedicines();
+                    showExpiryAlert();
+                    this.reset();
+                });
+            }
+        });
+
+        // Initialize date pickers
+        function initializeDatePickers() {
+            const mfgPicker = new Pikaday({
+                field: document.getElementById('mfgDate'),
+                format: 'MM-YYYY',
+                yearRange: [2000, new Date().getFullYear() + 10],
+                maxDate: new Date(),
+                onSelect: function() {
+                    const date = this.getMoment().format('MM-YYYY');
+                    document.getElementById('mfgDate').value = date;
+                }
+            });
+            document.getElementById('mfgDatePickerBtn').addEventListener('click', function() {
+                mfgPicker.show();
+            });
+
+            const expPicker = new Pikaday({
+                field: document.getElementById('expDate'),
+                format: 'MM-YYYY',
+                yearRange: [2000, new Date().getFullYear() + 10],
+                minDate: new Date(),
+                onSelect: function() {
+                    const date = this.getMoment().format('MM-YYYY');
+                    document.getElementById('expDate').value = date;
+                }
+            });
+            document.getElementById('expDatePickerBtn').addEventListener('click', function() {
+                expPicker.show();
+            });
+        }
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isLoggedIn && isBusinessHours()) {
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                displayMedicines();
+                showExpiryAlert();
+                initializeSearch();
+                initializeDatePickers();
+            } else {
+                document.getElementById('loginSection').style.display = 'block';
+                document.getElementById('mainContent').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
